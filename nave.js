@@ -1,6 +1,8 @@
 var cubeRotation = 0.0;
 const init_date = new Date();
 const init_time = init_date.getTime();
+var spaceShipSpeed = 8
+var oldSpaceShipSpeed = 8
 
 main();
 
@@ -45,6 +47,79 @@ function main() {
   // for the vertices and so forth is established.
   const shaderProgram = initShaderProgram(gl, vsSource, fsSource);
 
+
+var RAD2DEG = 180 / Math.PI
+var DEG2RAD = Math.PI / 180
+
+/**
+ * Convert [lat,lon] polar coordinates to [x,y,z] cartesian coordinates
+ * @param {Number} lon
+ * @param {Number} lat
+ * @param {Number} radius
+ * @return {Vector3}
+ */
+function polarToCartesian( lon, lat, radius ) {
+  var phi = ( 90 - lat ) * DEG2RAD
+  var theta = ( lon + 180 ) * DEG2RAD
+  return {
+    x: -(radius * Math.sin(phi) * Math.sin(theta)),
+    y: radius * Math.cos(phi),
+    z: radius * Math.sin(phi) * Math.cos(theta),
+  }
+}
+
+window.sphereGenerator = function(){
+  var radius = 10
+  var center = {
+    x:0,
+    y:0,
+    z:-200
+  }
+  sphereScalarField = []
+  sphereScalarFieldPoligons = []
+  var currentLon = 0
+  var currentLat = 0
+  var newPoint = null
+  var currentOriginPoligon = 0
+  while(currentLat<360)
+  {
+    while(currentLon<360)
+    {
+      newPoint=polarToCartesian(currentLon,currentLat,radius)
+      sphereScalarField.push(newPoint.x+center.x)
+      sphereScalarField.push(newPoint.y+center.y)
+      sphereScalarField.push(newPoint.z+center.z)
+      newPoint=polarToCartesian(currentLon+10,currentLat,radius)
+      sphereScalarField.push(newPoint.x+center.x)
+      sphereScalarField.push(newPoint.y+center.y)
+      sphereScalarField.push(newPoint.z+center.z)
+      newPoint=polarToCartesian(currentLon,currentLat+10,radius)
+      sphereScalarField.push(newPoint.x+center.x)
+      sphereScalarField.push(newPoint.y+center.y)
+      sphereScalarField.push(newPoint.z+center.z)
+      newPoint=polarToCartesian(currentLon+10,currentLat+10,radius)
+      sphereScalarField.push(newPoint.x+center.x)
+      sphereScalarField.push(newPoint.y+center.y)
+      sphereScalarField.push(newPoint.z+center.z)
+      currentLon=currentLon+10
+      sphereScalarFieldPoligons.push(currentOriginPoligon)
+      sphereScalarFieldPoligons.push(currentOriginPoligon+1)
+      sphereScalarFieldPoligons.push(currentOriginPoligon+3)
+      sphereScalarFieldPoligons.push(currentOriginPoligon)
+      sphereScalarFieldPoligons.push(currentOriginPoligon+2)
+      sphereScalarFieldPoligons.push(currentOriginPoligon+3)
+      currentOriginPoligon=currentOriginPoligon+4
+    }
+    currentLon = 0
+    currentLat = currentLat + 20
+
+  }
+
+  console.log(sphereScalarField)
+  console.log(sphereScalarFieldPoligons)
+  console.log(sphereScalarFieldPoligons.length)
+  return [sphereScalarField, sphereScalarFieldPoligons]
+}
   // Collect all the info needed to use the shader program.
   // Look up which attributes our shader program is using
   // for aVertexPosition, aVevrtexColor and also
@@ -99,39 +174,38 @@ function initBuffers(gl) {
 
   // Now create an array of positions for the cube.
 
+  var sphere = sphereGenerator()
+  //const positions = sphere[0]
+  //console.log(positions)
+
+
   const positions = [
     // Front face
-     0.0,  0.0,  1.0,
      0.0,  0.0,  1.0,
      1.0, -0.5,  1.0,
     -1.0, -0.5,  1.0,
 
     // Back face
      0.0,  0.0,  1.0,
-     0.0,  0.0,  1.0,
      1.0, -0.5,  1.0,
      0.0, -1.0, -1.0,
 
     // Top face
-     0.0,  0.0,  1.0,
      0.0,  0.0,  1.0,
     -1.0, -0.5,  1.0,
      0.0, -1.0, -1.0,
 
     // Bottom face
      1.0, -0.5,  1.0,
-     1.0, -0.5,  1.0,
     -1.0, -0.5,  1.0,
      0.0, -1.0, -1.0,
 
     // Right face
      0.0,  0.0,  1.0,
-     0.0,  0.0,  1.0,
     -1.0, -0.5,  1.0,
      -0.5,  0.0,  1.5,
 
     // Left face
-     0.0,  0.0,  1.0,
      0.0,  0.0,  1.0,
      1.0, -0.5,  1.0,
      0.5,  0.0,  1.5,
@@ -147,13 +221,13 @@ function initBuffers(gl) {
   // for each face.
 
   const faceColors = [
-    [1.0,  1.0,  1.0,  1.0],    // Front face: white
-    [0.0,  0.0,  0.5,  1.0],
-    [0.5,  1.0,  1.0,  1.0],
-    [1.0,  0.5,  1.0,  1.0],
-    [0.75,  0.75,  1.0,  1.0],
-    [1.0,  0.75,  0.75,  1.0],
-    [0.75,  1.0,  0.75,  1.0],
+    [1.0,  1.0,  1.0,  0.8],    // Front face: white
+    [0.6,  0.6,  0.6,  0.8],
+    [0.7,  0.7,  0.7,  0.8],
+    [0.3,  0.3,  0.3,  0.8],
+    [0.4,  0.4,  0.4,  0.8],
+    [0.5,  0.5,  0.5,  0.8],
+    [0.4,  0.4,  0.4,  0.8],
   ];
 
   // Convert the array of colors into a table for all the vertices.
@@ -181,14 +255,18 @@ function initBuffers(gl) {
   // indices into the vertex array to specify each triangle's
   // position.
 
+//const indices = sphere[1]
+//console.log(indices)
+
   const indices = [
-    0,  1,  2,      0,  2,  3,    // front
-    4,  5,  6,      4,  6,  7,    // back
-    8,  9,  10,     8,  10, 11,   // top
-    12, 13, 14,     12, 14, 15,   // bottom
-    16, 17, 18,     16, 18, 19,   // right
-    20, 21, 22,     20, 22, 23,   // left
+    0,  1,  2,
+    3,  4,  5,
+    6,  7,  8,
+    9,  10, 11,
+    12, 13, 14,
+    15, 16, 17,
   ];
+
 
   // Now send the element array to GL
 
@@ -247,10 +325,15 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
   var passedTime = n-init_time;
 
   var passedTimeSec = passedTime/1000;
-  var value = passedTimeSec%8;
-  value = value/4;
+  var value = passedTimeSec%oldSpaceShipSpeed;
+  value = value/(oldSpaceShipSpeed/2);
   position = positionBezier(value);
-  console.log(position)
+
+  if(value<0.01)
+  {
+    console.log("New speed")
+    oldSpaceShipSpeed=spaceShipSpeed
+  }
 
   // Now move the drawing position a bit to where we want to
   // start drawing the square.
@@ -327,7 +410,8 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
       modelViewMatrix);
 
   {
-    const vertexCount = 36;
+    //const vertexCount = 3888;
+    const vertexCount = 18;
     const type = gl.UNSIGNED_SHORT;
     const offset = 0;
     gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
@@ -401,3 +485,32 @@ function positionBezier(t){
 }
 
 positionBezier(3);
+
+document.onkeydown = checkKey;
+
+function checkKey(e) {
+
+    e = e || window.event;
+
+    if (e.keyCode == '38') {
+        // up arrow
+        if(spaceShipSpeed>3){
+          spaceShipSpeed = spaceShipSpeed-0.1
+        }
+    }
+    else if (e.keyCode == '40') {
+        // down arrow
+        if(spaceShipSpeed<100){
+          spaceShipSpeed = spaceShipSpeed+0.1
+        }
+    }
+    else if (e.keyCode == '37') {
+       // left arrow
+    }
+    else if (e.keyCode == '39') {
+       // right arrow
+    }
+
+    console.log(spaceShipSpeed)
+
+}
