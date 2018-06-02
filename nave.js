@@ -1,8 +1,24 @@
 var cubeRotation = 0.0;
 const init_date = new Date();
-const init_time = init_date.getTime();
+var init_time = init_date.getTime();
 var spaceShipSpeed = 8
 var oldSpaceShipSpeed = 8
+
+var globalx=0
+var globaly=0
+var globalz=0
+
+var globalAngleLon = 180
+var globalAngleLat = 0
+
+var wDown = false
+var sDown = false
+var aDown = false
+var dDown = false
+
+var sunPosZ = -1000
+var sunPosX = 10
+var sunPosY = 10
 
 main();
 
@@ -14,14 +30,11 @@ function main() {
   const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
 
   // If we don't have a GL context, give up now
-
   if (!gl) {
     alert('Unable to initialize WebGL. Your browser or machine may not support it.');
     return;
   }
-
   // Vertex shader program
-
   const vsSource = `
     attribute vec4 aVertexPosition;
     attribute vec4 aVertexColor;
@@ -70,10 +83,11 @@ function polarToCartesian( lon, lat, radius ) {
 
 window.sphereGenerator = function(){
   var radius = 10
+
   var center = {
     x:0,
     y:0,
-    z:-200
+    z:-100
   }
   sphereScalarField = []
   sphereScalarFieldPoligons = []
@@ -81,23 +95,31 @@ window.sphereGenerator = function(){
   var currentLat = 0
   var newPoint = null
   var currentOriginPoligon = 0
+  nextLineRandom=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+
   while(currentLat<360)
   {
+    var currentLineRandom=nextLineRandom
+    nextLineRandom=[]
+    for(var i=0;i<36;i++){
+      nextLineRandom.push(Math.random())
+    }
+
     while(currentLon<360)
     {
-      newPoint=polarToCartesian(currentLon,currentLat,radius)
+      newPoint=polarToCartesian(currentLon,currentLat,radius+currentLineRandom[currentLon/10])
       sphereScalarField.push(newPoint.x+center.x)
       sphereScalarField.push(newPoint.y+center.y)
       sphereScalarField.push(newPoint.z+center.z)
-      newPoint=polarToCartesian(currentLon+10,currentLat,radius)
+      newPoint=polarToCartesian(currentLon+10,currentLat,radius+currentLineRandom[(currentLon/10)+1])
       sphereScalarField.push(newPoint.x+center.x)
       sphereScalarField.push(newPoint.y+center.y)
       sphereScalarField.push(newPoint.z+center.z)
-      newPoint=polarToCartesian(currentLon,currentLat+10,radius)
+      newPoint=polarToCartesian(currentLon,currentLat+10,radius+nextLineRandom[currentLon/10])
       sphereScalarField.push(newPoint.x+center.x)
       sphereScalarField.push(newPoint.y+center.y)
       sphereScalarField.push(newPoint.z+center.z)
-      newPoint=polarToCartesian(currentLon+10,currentLat+10,radius)
+      newPoint=polarToCartesian(currentLon+10,currentLat+10,radius+nextLineRandom[(currentLon/10)+1])
       sphereScalarField.push(newPoint.x+center.x)
       sphereScalarField.push(newPoint.y+center.y)
       sphereScalarField.push(newPoint.z+center.z)
@@ -114,72 +136,25 @@ window.sphereGenerator = function(){
     currentLat = currentLat + 20
 
   }
+  vertexcount = 3888
+  const faceColors = [
+    [0.1,  0.1,  0.1,  0.8]    // Front face: white
+  ];
 
-  console.log(sphereScalarField)
-  console.log(sphereScalarFieldPoligons)
-  console.log(sphereScalarFieldPoligons.length)
-  return [sphereScalarField, sphereScalarFieldPoligons]
-}
-  // Collect all the info needed to use the shader program.
-  // Look up which attributes our shader program is using
-  // for aVertexPosition, aVevrtexColor and also
-  // look up uniform locations.
-  const programInfo = {
-    program: shaderProgram,
-    attribLocations: {
-      vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-      vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
-    },
-    uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-      modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-    },
-  };
+  // Convert the array of colors into a table for all the vertices.
 
-  // Here's where we call the routine that builds all the
-  // objects we'll be drawing.
-  const buffers = initBuffers(gl);
-
-  var then = 0;
-
-  // Draw the scene repeatedly
-  function render(now) {
-    now *= 0.0005;  // convert to seconds
-    const deltaTime = now - then;
-    then = now;
-
-    drawScene(gl, programInfo, buffers, deltaTime);
-
-    requestAnimationFrame(render);
+//Object switcher
+  var colors = []
+  for (var j = 0; j < 3888; ++j) {
+    const c = faceColors[0];
+    // Repeat each color four times for the four vertices of the face
+    colors = colors.concat(c, c, c, c);
   }
-  requestAnimationFrame(render);
+  return [sphereScalarField, sphereScalarFieldPoligons, colors, vertexcount]
 }
 
-//
-// initBuffers
-//
-// Initialize the buffers we'll need. For this demo, we just
-// have one object -- a simple three-dimensional cube.
-//
-function initBuffers(gl) {
-
-  // Create a buffer for the cube's vertex positions.
-
-  const positionBuffer = gl.createBuffer();
-
-  // Select the positionBuffer as the one to apply buffer
-  // operations to from here out.
-
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-
-  // Now create an array of positions for the cube.
-
-  var sphere = sphereGenerator()
-  //const positions = sphere[0]
-  //console.log(positions)
-
-
-  const positions = [
+function spaceShipGenerator(){
+  const vertexArray = [
     // Front face
      0.0,  0.0,  1.0,
      1.0, -0.5,  1.0,
@@ -211,15 +186,6 @@ function initBuffers(gl) {
      0.5,  0.0,  1.5,
   ];
 
-  // Now pass the list of positions into WebGL to build the
-  // shape. We do this by creating a Float32Array from the
-  // JavaScript array, then use it to fill the current buffer.
-
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-
-  // Now set up the colors for the faces. We'll use solid colors
-  // for each face.
-
   const faceColors = [
     [1.0,  1.0,  1.0,  0.8],    // Front face: white
     [0.6,  0.6,  0.6,  0.8],
@@ -232,14 +198,98 @@ function initBuffers(gl) {
 
   // Convert the array of colors into a table for all the vertices.
 
-  var colors = [];
-
+  var colors = []
   for (var j = 0; j < faceColors.length; ++j) {
     const c = faceColors[j];
-
     // Repeat each color four times for the four vertices of the face
     colors = colors.concat(c, c, c, c);
   }
+    const poligonArray = [
+      0,  1,  2,
+      3,  4,  5,
+      6,  7,  8,
+      9,  10, 11,
+      12, 13, 14,
+      15, 16, 17,
+    ];
+
+  vertexcount = 18
+  return [vertexArray, poligonArray, colors, vertexcount]
+}
+  // Collect all the info needed to use the shader program.
+  // Look up which attributes our shader program is using
+  // for aVertexPosition, aVevrtexColor and also
+  // look up uniform locations.
+const programInfo = {
+    program: shaderProgram,
+    attribLocations: {
+      vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+      vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor'),
+    },
+    uniformLocations: {
+      projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+      modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+    },
+  };
+  alert("Comenzar a Jugar")
+  // Here's where we call the routine that builds all the
+  // objects we'll be drawing.
+  var totalVertexCount = 0;
+  //Creating the sphere
+  var sphere = sphereGenerator()
+  // Create a buffer for the cube's vertex positions.
+  const sphereBuffer = gl.createBuffer();
+  // Select the positionBuffer as the one to apply buffer
+  // operations to from here out.
+  gl.bindBuffer(gl.ARRAY_BUFFER, sphereBuffer);
+  const positions = sphere[0]
+
+  const indices = sphere[1]
+  totalVertexCount=totalVertexCount+3888
+  const sun = initBuffers(gl,sphereBuffer, sphere[0], sphere[2], sphere[1]);
+
+  var spaceship=spaceShipGenerator()
+  // Create a buffer for the cube's vertex positions.
+  const spaceshipBuffer = gl.createBuffer();
+  // Select the positionBuffer as the one to apply buffer
+  // operations to from here out.
+  gl.bindBuffer(gl.ARRAY_BUFFER, spaceshipBuffer);
+  const buffers = initBuffers(gl,spaceshipBuffer, spaceship[0], spaceship[2], spaceship[1]);
+  //Creating the spaceship
+
+  var then = 0;
+  var arrayBuffers = []
+  arrayBuffers.push([sphere[3],sun]);
+  arrayBuffers.push([spaceship[3],buffers]);
+  // Draw the scene repeatedly
+  function render(now) {
+    now *= 0.0005;  // convert to seconds
+    const deltaTime = now - then;
+    then = now;
+
+    drawScene(gl, programInfo, deltaTime, arrayBuffers);
+
+    requestAnimationFrame(render);
+  }
+  requestAnimationFrame(render);
+}
+
+//
+// initBuffers
+//
+// Initialize the buffers we'll need. For this demo, we just
+// have one object -- a simple three-dimensional cube.
+//
+
+function initBuffers(gl, positionBuffer, positions, colors, indices) {
+  // Now pass the list of positions into WebGL to build the
+  // shape. We do this by creating a Float32Array from the
+  // JavaScript array, then use it to fill the current buffer.
+
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+
+  // Now set up the colors for the faces. We'll use solid colors
+  // for each face.
 
   const colorBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
@@ -255,17 +305,6 @@ function initBuffers(gl) {
   // indices into the vertex array to specify each triangle's
   // position.
 
-//const indices = sphere[1]
-//console.log(indices)
-
-  const indices = [
-    0,  1,  2,
-    3,  4,  5,
-    6,  7,  8,
-    9,  10, 11,
-    12, 13, 14,
-    15, 16, 17,
-  ];
 
 
   // Now send the element array to GL
@@ -283,7 +322,9 @@ function initBuffers(gl) {
 //
 // Draw the scene.
 //
-function drawScene(gl, programInfo, buffers, deltaTime) {
+function drawScene(gl, programInfo,deltaTime, arrayBuffers) {
+  //buffers
+  //vertexCount
   gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
   gl.clearDepth(1.0);                 // Clear everything
   gl.enable(gl.DEPTH_TEST);           // Enable depth testing
@@ -303,9 +344,8 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
   const fieldOfView = 45 * Math.PI / 180;   // in radians
   const aspect = gl.canvas.clientWidth / gl.canvas.clientHeight;
   const zNear = 0.1;
-  const zFar = 100.0;
+  const zFar = 5000.0;
   const projectionMatrix = mat4.create();
-
   // note: glmatrix.js always has the first argument
   // as the destination to receive the result.
   mat4.perspective(projectionMatrix,
@@ -313,7 +353,6 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
                    aspect,
                    zNear,
                    zFar);
-
   // Set the drawing position to the "identity" point, which is
   // the center of the scene.
   const modelViewMatrix = mat4.create();
@@ -322,7 +361,8 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
   //Get current position using bezier
   var d = new Date();
   var n = d.getTime();
-  var passedTime = n-init_time;
+  var passedTime = 10000;
+  init_time = n
 
   var passedTimeSec = passedTime/1000;
   var value = passedTimeSec%oldSpaceShipSpeed;
@@ -331,91 +371,158 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
 
   if(value<0.01)
   {
-    console.log("New speed")
     oldSpaceShipSpeed=spaceShipSpeed
   }
 
-  // Now move the drawing position a bit to where we want to
-  // start drawing the square.
 
-  mat4.translate(modelViewMatrix,     // destination matrix
-                 modelViewMatrix,     // matrix to translate
-                 [0.0+position.x, 0.0, -6.0-position.y]);  // amount to translate
-  mat4.rotate(modelViewMatrix,  // destination matrix
-              modelViewMatrix,  // matrix to rotate
-              cubeRotation,     // amount to rotate in radians
-              [0, 0, 0]);       // axis to rotate around (Z)
-  mat4.rotate(modelViewMatrix,  // destination matrix
-              modelViewMatrix,  // matrix to rotate
-              cubeRotation,// amount to rotate in radians
-              [0, 0, 0]);       // axis to rotate around (X)
 
   // Tell WebGL how to pull out the positions from the position
   // buffer into the vertexPosition attribute
-  {
+    for (var i=0, item; item = arrayBuffers[i]; i++){
+      if(i == (arrayBuffers.length-2)){
+        changeSunPosition(passedTime)
+        mat4.translate(projectionMatrix,     // destination matrix
+                      projectionMatrix,     // matrix to translate
+                      [sunPosX, sunPosY, sunPosZ]);  // amount to
+      }
+      if(i == (arrayBuffers.length-1)){
+        distanceTraveled = (passedTime*spaceShipSpeed)/20000
+        var RAD2DEG = 180 / Math.PI
+        var DEG2RAD = Math.PI / 180
+        function polarToCartesian( lon, lat, radius ) {
+          var phi = ( 90 - lat ) * DEG2RAD
+          var theta = ( lon + 180 ) * DEG2RAD
+          return {
+            x: -(radius * Math.sin(phi) * Math.sin(theta)),
+            y: radius * Math.cos(phi),
+            z: radius * Math.sin(phi) * Math.cos(theta),
+          }
+        }
+        vectors = polarToCartesian(globalAngleLon, globalAngleLat, distanceTraveled);
+        if(globalx+vectors.x<10 & globalx+vectors.x>-10){
+          globalx=globalx+vectors.x
+        }
+        if(globaly+vectors.y<10 & globalx+vectors.y>-10){
+          globaly=globaly+vectors.y
+        }
+        if(globaly+vectors.z<10 & globalx+vectors.z>-10){
+          globalz=globalz+vectors.z
+        }
 
-    const numComponents = 3;
-    const type = gl.FLOAT;
-    const normalize = false;
-    const stride = 0;
-    const offset = 0;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
-    gl.vertexAttribPointer(
-        programInfo.attribLocations.vertexPosition,
-        numComponents,
-        type,
-        normalize,
-        stride,
-        offset);
-    gl.enableVertexAttribArray(
-        programInfo.attribLocations.vertexPosition);
-  }
 
-  // Tell WebGL how to pull out the colors from the color buffer
-  // into the vertexColor attribute.
-  {
-    const numComponents = 4;
-    const type = gl.FLOAT;
-    const normalize = false;
-    const stride = 0;
-    const offset = 0;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
-    gl.vertexAttribPointer(
-        programInfo.attribLocations.vertexColor,
-        numComponents,
-        type,
-        normalize,
-        stride,
-        offset);
-    gl.enableVertexAttribArray(
-        programInfo.attribLocations.vertexColor);
-  }
 
-  // Tell WebGL which indices to use to index the vertices
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffers.indices);
+        angleTraveled = (passedTime)/360000
+        valueLon = 0
+        valueLat = 0
 
-  // Tell WebGL to use our program when drawing
 
-  gl.useProgram(programInfo.program);
+        if(wDown){
+          globalAngleLat =globalAngleLat+angleTraveled
+          //valueLat = angleTraveled
+        }
+        if(sDown){
+          globalAngleLat =globalAngleLat-angleTraveled
+          //valueLat = valueLon+angleTraveled
+        }
+        if(aDown){
+          globalAngleLon =globalAngleLon+angleTraveled
+          //valueLon = valueLon+angleTraveled
+        }
+        if(dDown){
+          globalAngleLon =globalAngleLon-angleTraveled
+          //valueLon = valueLon+angleTraveled
+        }
 
-  // Set the shader uniforms
+       mat4.translate(projectionMatrix,     // destination matrix
+                     projectionMatrix,     // matrix to translate
+                     [globalx, globaly, globalz]);  // amount to
+       mat4.rotate(projectionMatrix,  // destination matrix
+                   projectionMatrix,  // matrix to rotate
+                   valueLat,     // amount to rotate in radians
+                   [0, 1, 0]);       // axis to rotate around (Z)
+       /**mat4.rotate(projectionMatrix,  // destination matrix
+                   projectionMatrix,  // matrix to rotate
+                   valueLon,// amount to rotate in radians
+                   [1, 0, 0]);       // axis to rotate around (X)*/
 
-  gl.uniformMatrix4fv(
-      programInfo.uniformLocations.projectionMatrix,
-      false,
-      projectionMatrix);
-  gl.uniformMatrix4fv(
-      programInfo.uniformLocations.modelViewMatrix,
-      false,
-      modelViewMatrix);
+        mat4.translate(modelViewMatrix,     // destination matrix
+                       modelViewMatrix,     // matrix to translate
+                       [globalx, globaly, -6-globalz]);  // amount to translate
+        mat4.rotate(modelViewMatrix,  // destination matrix
+                    modelViewMatrix,  // matrix to rotate
+                    valueLat,     // amount to rotate in radians
+                    [0, 1, 0]);       // axis to rotate around (Z)
+        /**mat4.rotate(modelViewMatrix,  // destination matrix
+                    modelViewMatrix,  // matrix to rotate
+                    valueLon,// amount to rotate in radians
+                    [1, 0, 0]);       // axis to rotate around (X)*/
+      }
+        {
+          const numComponents = 3;
+          const type = gl.FLOAT;
+          const normalize = false;
+          const stride = 0;
+          const offset = 0;
+          gl.bindBuffer(gl.ARRAY_BUFFER, item[1].position);
+          gl.vertexAttribPointer(
+              programInfo.attribLocations.vertexPosition,
+              numComponents,
+              type,
+              normalize,
+              stride,
+              offset);
+          gl.enableVertexAttribArray(
+              programInfo.attribLocations.vertexPosition);
+        }
 
-  {
-    //const vertexCount = 3888;
-    const vertexCount = 18;
-    const type = gl.UNSIGNED_SHORT;
-    const offset = 0;
-    gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
-  }
+        // Tell WebGL how to pull out the colors from the color buffer
+        // into the vertexColor attribute.
+        {
+          const numComponents = 4;
+          const type = gl.FLOAT;
+          const normalize = false;
+          const stride = 0;
+          const offset = 0;
+          gl.bindBuffer(gl.ARRAY_BUFFER, item[1].color);
+          gl.vertexAttribPointer(
+              programInfo.attribLocations.vertexColor,
+              numComponents,
+              type,
+              normalize,
+              stride,
+              offset);
+          gl.enableVertexAttribArray(
+              programInfo.attribLocations.vertexColor);
+        }
+
+        // Tell WebGL which indices to use to index the vertices
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, item[1].indices);
+
+        // Tell WebGL to use our program when drawing
+
+        gl.useProgram(programInfo.program);
+
+        // Set the shader uniforms
+
+        gl.uniformMatrix4fv(
+            programInfo.uniformLocations.projectionMatrix,
+            false,
+            projectionMatrix);
+        gl.uniformMatrix4fv(
+            programInfo.uniformLocations.modelViewMatrix,
+            false,
+            modelViewMatrix);
+
+        const type = gl.UNSIGNED_SHORT;
+        const offset = 0;
+        gl.drawElements(gl.TRIANGLES, item[0], type, offset);
+
+        if(i == (arrayBuffers.length-2)){
+          mat4.translate(projectionMatrix,     // destination matrix
+                        projectionMatrix,     // matrix to translate
+                        [-sunPosX, -sunPosY, -sunPosZ]);  // amount to
+        }
+      }
 
   // Update the rotation for the next draw
 
@@ -488,29 +595,170 @@ positionBezier(3);
 
 document.onkeydown = checkKey;
 
+document.onkeyup = checkKeyUp;
+
 function checkKey(e) {
 
     e = e || window.event;
 
     if (e.keyCode == '38') {
         // up arrow
-        if(spaceShipSpeed>3){
-          spaceShipSpeed = spaceShipSpeed-0.1
-        }
+        wDown = true
     }
     else if (e.keyCode == '40') {
         // down arrow
-        if(spaceShipSpeed<100){
-          spaceShipSpeed = spaceShipSpeed+0.1
-        }
+        sDown = true
     }
     else if (e.keyCode == '37') {
        // left arrow
+       aDown = true
     }
     else if (e.keyCode == '39') {
        // right arrow
+       dDown = true
+    }
+    else if (e.keyCode == '87') {
+       // w key
+       wDown = true
+    }
+    else if (e.keyCode == '83') {
+       // s key
+       sDown = true
+    }
+    else if (e.keyCode == '65') {
+       // a key
+       aDown = true
+    }
+    else if (e.keyCode == '68') {
+       // d key
+       dDown = true
     }
 
-    console.log(spaceShipSpeed)
 
+}
+
+
+function checkKeyUp(e) {
+
+    e = e || window.event;
+
+    if (e.keyCode == '38') {
+        // up arrow
+        wDown = false
+    }
+    else if (e.keyCode == '40') {
+        // down arrow
+        sDown = false
+    }
+    else if (e.keyCode == '37') {
+       // left arrow
+       aDown = false
+    }
+    else if (e.keyCode == '39') {
+       // right arrow
+       dDown = false
+    }
+    else if (e.keyCode == '87') {
+       // w key
+       wDown = false
+    }
+    else if (e.keyCode == '83') {
+       // s key
+       sDown = false
+    }
+    else if (e.keyCode == '65') {
+       // a key
+       aDown = false
+    }
+    else if (e.keyCode == '68') {
+       // d key
+       dDown = false
+    }
+
+
+}
+
+function changeSunPosition(passedTime){
+  sunPosZ=sunPosZ+(passedTime/2000)
+
+  if(sunPosZ>200){
+    sunPosZ=-500
+
+    if(sunPosY==10 & sunPosX==10){
+      sunPosY = -10
+      if(globalx>0 & globaly>0){
+        alert("Has perdido: Has chocado con un asteroide.")
+        globalx=0
+        globaly=0
+        globalz=0
+        globalAngleLat=0
+        globalAngleLon=-180
+        wDown = false
+        sDown = false
+        aDown = false
+        dDown = false
+      }
+    }
+    else if(sunPosY==-10 & sunPosX==10){
+      sunPosX = -10
+      if(globalx>0 & globaly<0){
+        alert("Has perdido: Has chocado con un asteroide.")
+        globalx=0
+        globaly=0
+        globalz=0
+        globalAngleLat=0
+        globalAngleLon=-180
+        wDown = false
+        sDown = false
+        aDown = false
+        dDown = false
+      }
+    }
+    else if(sunPosY==-10 & sunPosX==-10){
+      sunPosY = 10
+      if(globalx<0 & globaly<0){
+        alert("Has perdido: Has chocado con un asteroide.")
+        globalx=0
+        globaly=0
+        globalz=0
+        globalAngleLat=0
+        globalAngleLon=-180
+        wDown = false
+        sDown = false
+        aDown = false
+        dDown = false
+      }
+    }
+    else if(sunPosY==10 & sunPosX==-10){
+      sunPosX = 10
+      if(globalx<0 & globaly>0){
+        alert("Has perdido: Has chocado con un asteroide.")
+        globalx=0
+        globaly=0
+        globalz=0
+        globalAngleLat=0
+        globalAngleLon=-180
+        wDown = false
+        sDown = false
+        aDown = false
+        dDown = false
+      }
+    }
+
+    console.log(globalx)
+    console.log(globaly)
+    console.log(globalz)
+  }
+  if(globalx>4 | globaly>2 | globalx<-4 | globaly<-2){
+    alert("Has perdido: Te has alejado mucho del centro.")
+    globalx=0
+    globaly=0
+    globalz=0
+    globalAngleLat=0
+    globalAngleLon=-180
+    wDown = false
+    sDown = false
+    aDown = false
+    dDown = false
+  }
 }
