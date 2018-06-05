@@ -4,11 +4,13 @@ var init_time = init_date.getTime();
 var spaceShipSpeed = 8
 var oldSpaceShipSpeed = 8
 
+var asteroidPath = 1
+
 var globalx=0
 var globaly=0
 var globalz=0
 
-var globalAngleLon = 180
+var globalAngleLon = -180
 var globalAngleLat = 0
 
 var wDown = false
@@ -19,6 +21,12 @@ var dDown = false
 var sunPosZ = -1000
 var sunPosX = 10
 var sunPosY = 10
+
+var asteroidDodgeCount = 0
+
+var mainmenu = 1
+var currentMaxScore = 0
+var currentMaxSpeed = 0
 
 main();
 
@@ -96,7 +104,7 @@ window.sphereGenerator = function(){
   var newPoint = null
   var currentOriginPoligon = 0
   nextLineRandom=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-
+  var colors = []
   while(currentLat<360)
   {
     var currentLineRandom=nextLineRandom
@@ -123,77 +131,132 @@ window.sphereGenerator = function(){
       sphereScalarField.push(newPoint.x+center.x)
       sphereScalarField.push(newPoint.y+center.y)
       sphereScalarField.push(newPoint.z+center.z)
-      currentLon=currentLon+10
       sphereScalarFieldPoligons.push(currentOriginPoligon)
       sphereScalarFieldPoligons.push(currentOriginPoligon+1)
       sphereScalarFieldPoligons.push(currentOriginPoligon+3)
       sphereScalarFieldPoligons.push(currentOriginPoligon)
       sphereScalarFieldPoligons.push(currentOriginPoligon+2)
       sphereScalarFieldPoligons.push(currentOriginPoligon+3)
+
+      var c = [currentLineRandom[currentLon/10],  currentLineRandom[currentLon/10],  currentLineRandom[currentLon/10] , 0.5];
+      colors = colors.concat(c, c, c, c);
+      c = [currentLineRandom[(currentLon/10)+1],  currentLineRandom[(currentLon/10)+1],  currentLineRandom[(currentLon/10)+1] , 0.5];
+      colors = colors.concat(c, c, c, c);
+      c = [nextLineRandom[(currentLon/10)+1],  nextLineRandom[(currentLon/10)+1],  nextLineRandom[(currentLon/10)+1] , 0.5];
+      colors = colors.concat(c, c, c, c);
+      c = [currentLineRandom[currentLon/10],  currentLineRandom[currentLon/10],  currentLineRandom[currentLon/10] , 0.5];
+      colors = colors.concat(c, c, c, c);
+      c = [nextLineRandom[currentLon/10],  nextLineRandom[currentLon/10],  nextLineRandom[currentLon/10] , 0.5];
+      colors = colors.concat(c, c, c, c);
+      c = [nextLineRandom[(currentLon/10)+1],  nextLineRandom[(currentLon/10)+1],  nextLineRandom[(currentLon/10)+1] , 0.5];
+      colors = colors.concat(c, c, c, c);
+
+      currentLon=currentLon+10
       currentOriginPoligon=currentOriginPoligon+4
     }
     currentLon = 0
-    currentLat = currentLat + 20
+    currentLat = currentLat + 10
 
   }
-  vertexcount = 3888
+
+  vertexcount = sphereScalarFieldPoligons.length
+  /**
   const faceColors = [
-    [0.1,  0.1,  0.1,  0.8]    // Front face: white
+    [0.1,  0.1,  0.1,  0.15]    // Front face: white
   ];
 
   // Convert the array of colors into a table for all the vertices.
 
 //Object switcher
-  var colors = []
+
   for (var j = 0; j < 3888; ++j) {
     const c = faceColors[0];
     // Repeat each color four times for the four vertices of the face
     colors = colors.concat(c, c, c, c);
   }
+  */
   return [sphereScalarField, sphereScalarFieldPoligons, colors, vertexcount]
 }
 
 function spaceShipGenerator(){
   const vertexArray = [
-    // Front face
-     0.0,  0.0,  1.0,
-     1.0, -0.5,  1.0,
-    -1.0, -0.5,  1.0,
+    //THRUSTER
+     -0.3,  -0.15,  1.0,
+     0.3, -0.15,  1.0,
+     0, -0.5,  1.0,
 
-    // Back face
+     //FRONT RIGHT
      0.0,  0.0,  1.0,
      1.0, -0.5,  1.0,
      0.0, -1.0, -1.0,
-
-    // Top face
+     //FRONT LEFT
      0.0,  0.0,  1.0,
     -1.0, -0.5,  1.0,
      0.0, -1.0, -1.0,
-
-    // Bottom face
+     //BOTTOM
      1.0, -0.5,  1.0,
     -1.0, -0.5,  1.0,
      0.0, -1.0, -1.0,
 
-    // Right face
+     //FIN 1
      0.0,  0.0,  1.0,
     -1.0, -0.5,  1.0,
      -0.5,  0.0,  1.5,
-
-    // Left face
+     //FIN2
      0.0,  0.0,  1.0,
      1.0, -0.5,  1.0,
      0.5,  0.0,  1.5,
+
+     //VERTICAL FLAME 1
+     0.0,  -0.15,  1.0,
+     0.0, -0.45,  1.0,
+     0.05,  -0.3,  2,
+
+     //HORIZANTAL FLAME 1
+     0.15, -0.3,  1.0,
+     -0.15, -0.3,  1.0,
+     0.1,  -0.25,  2,
+
+     //VERTICAL FLAME 2
+     0.0,  -0.15,  1.0,
+     0.0, -0.45,  1.0,
+     -0.05,  -0.15,  2,
+
+     //HORIZANTAL FLAME 2
+     0.1,  -0.35,  1.0,
+     -0.1, -0.15,  1.0,
+     0.05,  -0.2,  2,
+
+     //BACKPANEL 1
+     -0.3,  -0.15,  1.0,
+     0.3, -0.15,  1.0,
+     0, 0,  1.0,
+
+     //BACKPANEL 2
+     1,  -0.5,  1.0,
+     0.3, -0.15,  1.0,
+     0, -0.5,  1.0,
+
+     //BACKPANEL 3
+     -0.3,  -0.15,  1.0,
+     -1, -0.5,  1.0,
+     0, -0.5,  1.0,
   ];
 
   const faceColors = [
-    [1.0,  1.0,  1.0,  0.8],    // Front face: white
-    [0.6,  0.6,  0.6,  0.8],
-    [0.7,  0.7,  0.7,  0.8],
+    [1.0,  1.0,  0.0,  0.8],
+    [0.9,  0.9,  0.9,  1],
+    [0.6,  0.6,  0.6,  1],
     [0.3,  0.3,  0.3,  0.8],
-    [0.4,  0.4,  0.4,  0.8],
-    [0.5,  0.5,  0.5,  0.8],
-    [0.4,  0.4,  0.4,  0.8],
+    [0,  0.5,  1,  1],
+    [0,  0.5,  1,  1],
+    [1,  1,  0,  0.8],
+    [1,  1,  0,  0.8],
+    [1,  1,  0,  0.8],
+    [1,  1,  0,  0.8],
+    [0.8,  0.8,  0.8,  1],
+    [0.9,  0.9,  0.9,  1],
+    [0.9,  0.9,  0.9,  1],
   ];
 
   // Convert the array of colors into a table for all the vertices.
@@ -202,7 +265,7 @@ function spaceShipGenerator(){
   for (var j = 0; j < faceColors.length; ++j) {
     const c = faceColors[j];
     // Repeat each color four times for the four vertices of the face
-    colors = colors.concat(c, c, c, c);
+    colors = colors.concat(c, c, c);
   }
     const poligonArray = [
       0,  1,  2,
@@ -211,9 +274,16 @@ function spaceShipGenerator(){
       9,  10, 11,
       12, 13, 14,
       15, 16, 17,
+      18, 19, 20,
+      21, 22, 23,
+      24, 25, 26,
+      27, 28, 29,
+      30, 31, 32,
+      33, 34, 35,
+      36, 37, 38,
     ];
 
-  vertexcount = 18
+  vertexcount = poligonArray.length
   return [vertexArray, poligonArray, colors, vertexcount]
 }
   // Collect all the info needed to use the shader program.
@@ -231,7 +301,6 @@ const programInfo = {
       modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
     },
   };
-  alert("Comenzar a Jugar")
   // Here's where we call the routine that builds all the
   // objects we'll be drawing.
   var totalVertexCount = 0;
@@ -380,7 +449,9 @@ function drawScene(gl, programInfo,deltaTime, arrayBuffers) {
   // buffer into the vertexPosition attribute
     for (var i=0, item; item = arrayBuffers[i]; i++){
       if(i == (arrayBuffers.length-2)){
-        changeSunPosition(passedTime)
+        if(mainmenu==0){
+          changeSunPosition(passedTime)
+        }
         mat4.translate(projectionMatrix,     // destination matrix
                       projectionMatrix,     // matrix to translate
                       [sunPosX, sunPosY, sunPosZ]);  // amount to
@@ -601,6 +672,7 @@ function checkKey(e) {
 
     e = e || window.event;
 
+    if(mainmenu==0){
     if (e.keyCode == '38') {
         // up arrow
         wDown = true
@@ -633,7 +705,7 @@ function checkKey(e) {
        // d key
        dDown = true
     }
-
+  }
 
 }
 
@@ -642,115 +714,119 @@ function checkKeyUp(e) {
 
     e = e || window.event;
 
-    if (e.keyCode == '38') {
-        // up arrow
-        wDown = false
+    if(mainmenu==1){
+      if (e.keyCode == '32') {
+        mainmenu=0
+        updateOverlay(0,1)
+        document.getElementById("mainmenu").setAttribute("style", "display:none;")
+      }
     }
-    else if (e.keyCode == '40') {
-        // down arrow
-        sDown = false
-    }
-    else if (e.keyCode == '37') {
-       // left arrow
-       aDown = false
-    }
-    else if (e.keyCode == '39') {
-       // right arrow
-       dDown = false
-    }
-    else if (e.keyCode == '87') {
-       // w key
-       wDown = false
-    }
-    else if (e.keyCode == '83') {
-       // s key
-       sDown = false
-    }
-    else if (e.keyCode == '65') {
-       // a key
-       aDown = false
-    }
-    else if (e.keyCode == '68') {
-       // d key
-       dDown = false
-    }
+      if (e.keyCode == '38') {
+          // up arrow
+          wDown = false
+      }
+      else if (e.keyCode == '40') {
+          // down arrow
+          sDown = false
+      }
+      else if (e.keyCode == '37') {
+         // left arrow
+         aDown = false
+      }
+      else if (e.keyCode == '39') {
+         // right arrow
+         dDown = false
+      }
+      else if (e.keyCode == '87') {
+         // w key
+         wDown = false
+      }
+      else if (e.keyCode == '83') {
+         // s key
+         sDown = false
+      }
+      else if (e.keyCode == '65') {
+         // a key
+         aDown = false
+      }
+      else if (e.keyCode == '68') {
+         // d key
+         dDown = false
+
+  }
 
 
 }
 
 function changeSunPosition(passedTime){
-  sunPosZ=sunPosZ+(passedTime/2000)
+  var difficulty = ((asteroidDodgeCount/15)+1)
+  if(difficulty>3){
+    difficulty=3
+  }
+  sunPosZ=sunPosZ+(difficulty*passedTime/2000)
 
   if(sunPosZ>200){
-    sunPosZ=-500
+    sunPosZ=-1400
+    var dead = false
+    if(asteroidPath == 1){
+      if(globalx>=0 & globaly>=0){
+        dead = true
+      }
+    }
+    else if(asteroidPath == 2){
+      if(globalx>=0 & globaly<=0){
+        dead = true
+      }
+    }
+    else if(asteroidPath == 3){
+      if(globalx<=0 & globaly<=0){
+        dead = true
+      }
+    }
+    else if(asteroidPath == 4){
+      if(globalx<=0 & globaly>=0){
+        dead = true
+      }
+    }
 
-    if(sunPosY==10 & sunPosX==10){
-      sunPosY = -10
-      if(globalx>0 & globaly>0){
-        alert("Has perdido: Has chocado con un asteroide.")
-        globalx=0
-        globaly=0
-        globalz=0
-        globalAngleLat=0
-        globalAngleLon=-180
-        wDown = false
-        sDown = false
-        aDown = false
-        dDown = false
-      }
+    if(dead){
+      globalx=0
+      globaly=0
+      globalz=0
+      globalAngleLat=0
+      globalAngleLon=-180
+      wDown = false
+      sDown = false
+      aDown = false
+      dDown = false
+      updateMainMenu(asteroidDodgeCount, difficulty, "You have crashed into an asteroid.")
+      updateOverlay(0,0)
+      asteroidDodgeCount = 0
+
     }
-    else if(sunPosY==-10 & sunPosX==10){
-      sunPosX = -10
-      if(globalx>0 & globaly<0){
-        alert("Has perdido: Has chocado con un asteroide.")
-        globalx=0
-        globaly=0
-        globalz=0
-        globalAngleLat=0
-        globalAngleLon=-180
-        wDown = false
-        sDown = false
-        aDown = false
-        dDown = false
-      }
-    }
-    else if(sunPosY==-10 & sunPosX==-10){
-      sunPosY = 10
-      if(globalx<0 & globaly<0){
-        alert("Has perdido: Has chocado con un asteroide.")
-        globalx=0
-        globaly=0
-        globalz=0
-        globalAngleLat=0
-        globalAngleLon=-180
-        wDown = false
-        sDown = false
-        aDown = false
-        dDown = false
-      }
-    }
-    else if(sunPosY==10 & sunPosX==-10){
+
+    asteroidPath = Math.floor(Math.random()*(4-1+1)+1);
+    if(asteroidPath == 1){
       sunPosX = 10
-      if(globalx<0 & globaly>0){
-        alert("Has perdido: Has chocado con un asteroide.")
-        globalx=0
-        globaly=0
-        globalz=0
-        globalAngleLat=0
-        globalAngleLon=-180
-        wDown = false
-        sDown = false
-        aDown = false
-        dDown = false
-      }
+      sunPosY = 10
     }
+    else if(asteroidPath == 2){
+      sunPosX = 10
+      sunPosY = -10
+    }
+    else if(asteroidPath == 3){
+      sunPosX = -10
+      sunPosY = -10
+    }
+    else if(asteroidPath == 4){
+      sunPosX = -10
+      sunPosY = 10
+    }
+    asteroidDodgeCount = asteroidDodgeCount + 1
 
-    console.log(globalx)
-    console.log(globaly)
-    console.log(globalz)
+    updateOverlay(asteroidDodgeCount,difficulty);
   }
   if(globalx>4 | globaly>2 | globalx<-4 | globaly<-2){
-    alert("Has perdido: Te has alejado mucho del centro.")
     globalx=0
     globaly=0
     globalz=0
@@ -760,5 +836,32 @@ function changeSunPosition(passedTime){
     sDown = false
     aDown = false
     dDown = false
+    updateMainMenu(asteroidDodgeCount, difficulty, "You have strayed off-course.")
+    updateOverlay(0,0)
+    asteroidDodgeCount = 0
   }
+}
+
+function updateOverlay(asteroidDodgeCount, difficulty){
+  document.getElementById("score").innerHTML = "Score: "+asteroidDodgeCount;
+  var speed = difficulty*100;
+  speed = Math.round(speed * 100) / 100
+  document.getElementById("speed").innerHTML = speed+" km/hr";
+}
+
+function updateMainMenu(asteroidDodgeCount, difficulty, deathReason){
+  var speed = difficulty*100;
+  speed = Math.round(speed * 100) / 100
+  if(currentMaxSpeed<speed){
+    currentMaxSpeed=speed
+    document.getElementById("maxspeed").innerHTML = "Top Speed: "+speed+" km/hr"
+  }
+  if(currentMaxScore<asteroidDodgeCount){
+    currentMaxScore=asteroidDodgeCount
+    document.getElementById("maxscore").innerHTML = "Top Score: "+asteroidDodgeCount
+  }
+  mainmenu = 1
+  document.getElementById("mainmenu").setAttribute("style", "display:inline;")
+
+  document.getElementById("death").innerHTML = deathReason
 }
